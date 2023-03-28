@@ -43,7 +43,7 @@ fn read_file(file_path: &Path) -> String {
     buffer
 }
 
-//todo: fix it prints all the todos but dose not add them add to the file
+
 fn add_todos_to_file(file_path: &Path) {
     let mut todos_file = OpenOptions::new().append(true).open("TODOS").unwrap();
     let content = read_file(&file_path);
@@ -80,21 +80,12 @@ fn add_todos_to_file(file_path: &Path) {
 
 
 
-
 fn read_dir(dir_path: &Path) {
-    let todos_file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open("TODOS")
-        .unwrap();
-
     for entry in std::fs::read_dir(dir_path).expect("ERROR: could not read directory") {
         if let Ok(entry) = entry {
             if entry.file_type().unwrap().is_file() {
                 add_todos_to_file(&entry.path());
             } else if entry.file_type().unwrap().is_dir() {
-                todos_file.set_len(0).expect("ERROR: could not clear file");
                 read_dir(&entry.path());
             }
         }
