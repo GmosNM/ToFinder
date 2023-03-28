@@ -1,14 +1,37 @@
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::path::Path;
 
-fn format_file(file_path: &str) {
-    let content = read_file(&file_path);
-    let formatted_content = content.replace("  ", " ");
-    let mut file = File::create(&file_path).expect("ERROR: could not create file");
-    file.write_all(formatted_content.as_bytes())
-        .expect("ERROR: could not write to file");
+fn format_file(file_path: &str) -> std::io::Result<()> {
+    let file = File::open(file_path)?;
+    let reader = BufReader::new(file);
+    let mut buffer = String::new();
+
+    for line in reader.lines() {
+        let line = line?;
+        let mut new_line = String::new();
+        let mut last_char = ' ';
+
+        for c in line.chars() {
+            if c == '\t' {
+                new_line.push(' ');
+            } else if c == ' ' && last_char != ' ' {
+                new_line.push(c);
+            } else if c != ' ' {
+                new_line.push(c);
+            }
+            last_char = c;
+        }
+
+        buffer.push_str(&new_line);
+        buffer.push('\n');
+    }
+
+    let mut file = File::create(file_path)?;
+    file.write_all(buffer.as_bytes())?;
+    Ok(())
 }
 
 fn read_file(file_path: &str) -> String {
@@ -55,7 +78,7 @@ fn read_dir(dir_path: &str) {
             }
         }
     }
-    format_file("TODOS");
+    format_file("TODOS").expect("ERROR: could not format the file");
 }
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -71,7 +94,7 @@ fn main() {
         let mut todos_file = OpenOptions::new().append(true).create(true).write(true).open("TODOS").unwrap();
         todos_file.write_all(b"").expect("ERROR: could not clear file");
         add_todos_to_file(&args[1], &mut todos_file);
-        format_file(&args[1]);
+        format_file(&args[1]).expect("ERROR: could not format the file");
         println!("File formatted successfully!");
     } else {
         println!("Invalid input. Please enter a valid directory or file path.");
