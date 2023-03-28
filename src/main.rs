@@ -43,7 +43,7 @@ fn read_file(file_path: &Path) -> String {
     buffer
 }
 
-//todo: fix it prints all the todos but dose not add them add to the file
+//todo: it prints all the todos but dose not add all of them to the file
 fn add_todos_to_file(file_path: &Path) {
     let mut todos_file = OpenOptions::new().append(true).open("TODOS").unwrap();
     let content = read_file(&file_path);
