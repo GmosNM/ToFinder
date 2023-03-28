@@ -24,10 +24,10 @@ fn read_file(file_path: &str) -> String {
     buffer
 }
 
-//todo: fix the file when it genrate it append it self
 fn add_todos_to_file(file_path: &str, mut todos_file: &File) {
     let content = read_file(&file_path);
     let lines = content.lines();
+    todos_file.write_all(b"").expect("ERROR: no file");
     for (i, line) in lines.enumerate() {
         match line {
             line if line.contains("//todo") || line.contains("//TODO")
