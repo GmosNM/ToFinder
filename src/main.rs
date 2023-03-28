@@ -3,9 +3,9 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 fn format_file(file_path: &str) {
-    let content = read_file(&file_path);
+    let content = read_file(file_path);
     let formatted_content = content.replace("\t", "    ");
-    let mut file = File::create(&file_path).expect("ERROR: could not create file");
+    let mut file = File::create(file_path).expect("ERROR: could not create file");
     file.write_all(formatted_content.as_bytes())
         .expect("ERROR: could not write to file");
 }
@@ -20,7 +20,7 @@ fn read_file(file_path: &str) -> String {
         eprintln!("ERROR: could not read file: {}", e);
         std::process::exit(1);
     }
-    return buffer;
+    buffer
 }
 
 fn add_todos_to_file(file_path: &str) {
@@ -28,16 +28,20 @@ fn add_todos_to_file(file_path: &str) {
     let lines = content.lines();
     let mut todos_file = OpenOptions::new().append(true).create(true).write(true).open("TODOS").unwrap();
     if todos_file.metadata().unwrap().len() == 0 {
-        todos_file.write_all(b"TODOS:\n").expect("ERROR: could not write to file");
+        todos_file.write_all(b"TODOs:\n").expect("ERROR: could not write to file");
     }
     for (i, line) in lines.enumerate() {
-        if line.contains("//todo") || line.contains("//TODO") || line.contains("// TODO") {
-            let path_buf = PathBuf::from(file_path);
-            let file_name = path_buf.file_name().unwrap().to_str().unwrap();
-            let todo = format!("{}:{}: {}\n", file_name, i + 1, line);
-            todos_file.write_all(todo.as_bytes())
-                .expect("ERROR: could not write to file");
-            println!("{}", todo);
+        match line {
+            line if line.contains("//todo") || line.contains("//TODO")
+                || line.contains("// TODO") || line.contains("// todo")=> {
+                let path_buf = PathBuf::from(file_path);
+                let file_name = path_buf.file_name().unwrap().to_str().unwrap();
+                let todo = format!("{}:{}: {}\n", file_name, i + 1, line);
+                todos_file.write_all(todo.as_bytes())
+                    .expect("ERROR: could not write to file");
+                println!("{}", todo);
+            },
+            _ => (),
         }
     }
 }
@@ -46,8 +50,7 @@ fn read_dir(dir_path: &str) {
     for entry in std::fs::read_dir(dir_path).expect("ERROR: could not read directory") {
         if let Ok(entry) = entry {
             if entry.file_type().unwrap().is_file() {
-                let file_path = entry.path().display().to_string();
-                add_todos_to_file(&file_path);
+                add_todos_to_file(&entry.path().display().to_string());
             }
         }
     }
