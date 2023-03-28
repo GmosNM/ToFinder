@@ -11,17 +11,13 @@ fn format_file(file_path: &str) -> std::io::Result<()> {
     for line in reader.lines() {
         let line = line?;
         let mut new_line = String::new();
-        let mut last_char = ' ';
+        let last_char = ' ';
 
         for c in line.chars() {
-            if c == '\t' {
-                new_line.push(' ');
-            } else if c == ' ' && last_char != ' ' {
-                new_line.push(c);
-            } else if c != ' ' {
-                new_line.push(c);
+            match (c, last_char == ' ') {
+                ('\t', _) | (' ', false) => new_line.push(' '),
+                _ => new_line.push(c),
             }
-            last_char = c;
         }
 
         buffer.push_str(&new_line);
@@ -51,27 +47,33 @@ fn add_todos_to_file(file_path: &Path, mut todos_file: &File) {
     let lines = content.lines();
     todos_file.write_all(b"").expect("ERROR: no file");
     for (i, line) in lines.enumerate() {
-        match line {
-            line if line.contains("//todo") || line.contains("//TODO")
-                || line.contains("// TODO") || line.contains("// todo") => {
+        if line.contains("//todo") || line.contains("//TODO")
+            || line.contains("// TODO") || line.contains("// todo") {
                 let path_buf = PathBuf::from(file_path);
                 let file_name = path_buf.file_name().unwrap().to_str().unwrap();
-                let todo = format!("{}:{}: {}\n", file_name, i + 1, line);
-                todos_file.write_all(todo.as_bytes())
-                    .expect("ERROR: could not write to file");
-                println!("{}", todo);
-            },
-            _ => (),
+                let dir_path = path_buf.parent().unwrap_or(Path::new(""));
+                let dir_str = dir_path.to_str().unwrap();
+                let file_path_str = file_path.to_str().unwrap();
+                let full_file_path = if file_path_str.contains(dir_str) {
+                    file_path_str.to_string()
+                } else {
+                    format!("{}\\{}", dir_str, file_name)
+                };
+                if file_name != "TODOS" {
+                    let todo = format!("{}:{}: {}\n", full_file_path, i + 1, line);
+                    todos_file.write_all(todo.as_bytes())
+                        .expect("ERROR: could not write to file");
+                    println!("{}", todo);
+                }
         }
     }
 }
 
-
 fn read_dir(dir_path: &Path) {
     let mut todos_file = OpenOptions::new()
-        .append(false)
-        .create(true)
         .write(true)
+        .truncate(true)
+        .create(true)
         .open("TODOS")
         .unwrap();
 
@@ -80,6 +82,7 @@ fn read_dir(dir_path: &Path) {
             if entry.file_type().unwrap().is_file() {
                 add_todos_to_file(&entry.path(), &mut todos_file);
             } else if entry.file_type().unwrap().is_dir() {
+                todos_file.set_len(0).expect("ERROR: could not clear file");
                 read_dir(&entry.path());
             }
         }
@@ -87,7 +90,6 @@ fn read_dir(dir_path: &Path) {
 
     format_file("TODOS").expect("ERROR: could not format the file");
 }
-
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -100,11 +102,10 @@ fn main() {
     if path.is_dir() {
         read_dir(path);
     } else if path.is_file() {
-        let mut todos_file = OpenOptions::new().append(true).create(true).write(true).open("TODOS").unwrap();
+        let mut todos_file = OpenOptions::new().create(true).write(true).open("TODOS").unwrap();
         todos_file.write_all(b"").expect("ERROR: could not clear file");
         add_todos_to_file(path, &mut todos_file);
         format_file(&args[1]).expect("ERROR: could not format the file");
-        println!("File formatted successfully!");
     } else {
         println!("Invalid input. Please enter a valid directory or file path.");
     }
